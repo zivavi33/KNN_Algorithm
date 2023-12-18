@@ -1,2 +1,3 @@
-# KNN_Algorithm
-implementation of the "knn" algorithm for learning python and ML.
+# ML_basics repo
+implementation of ML models in python.
+the main goal is learning the basics of the models and and learning python basiscs and libraries like 'numpy'
