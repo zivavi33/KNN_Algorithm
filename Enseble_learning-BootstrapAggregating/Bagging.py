@@ -1,8 +1,9 @@
 import numpy as np
 from collections import Counter
+import multiprocessing
 from multiprocessing import Process , Queue
 import time
-
+import argparse
 
 # class ValueMustBeInteger(Exception):
 #     def __init__(self,messege,value):
@@ -14,6 +15,7 @@ import time
 #         self.messege = messege
 #         self.value = value
 
+multiprocessing.set_start_method('fork') #'spawn'
 
 
 
@@ -23,7 +25,7 @@ class Bagging:
         self._part_to_sample = sample_size
         self._number_bags = number_bags
         self._replacement = replacement
-        self._bags = []
+        self._bags : None | list = None
 
     @property
     def _part_to_sample(self):
@@ -41,12 +43,12 @@ class Bagging:
         return self.__number_bags
     @_number_bags.setter
     def _number_bags(self,value):
-        if  value >= 1  and isinstance(value, int):  
+        if  value > 1  and isinstance(value, int):  
             self.__number_bags = value
-        if value == 1:
+        elif value == 1:
             raise Warning(f"_number_bags value = ({value}). it is not recommended because it is not actually bagging anymore ")
         else:
-            raise ValueError(f"1) 'number_bags' must be a positive integer! ({value}) ")
+            raise ValueError(f"1) 'number_bags' must be a positive integer greater than '0'! ({value}) ")
 
     @property
     def _replacement(self):
@@ -84,3 +86,24 @@ class Bagging:
             x = queue.get()
             self._bags.append(x)
         print(self._bags)
+
+    def _most_common_label(self,y):
+        """ democratic simple hard voting from all of the weak learners"""
+        counter = Counter(y)
+        most_common = counter.most_common(1)[0][0]
+        return most_common
+
+    def predict(self,X):
+        """make predictions from each weak learner and rearrange the data so we get predictions from all of the weak 
+        learners for each data point"""
+        weak_predictions = np.array([bag.predict(X) for bag in self._bags])
+        weak_predictions = np.swapaxes(weak_predictions, 0,1)
+        y_pred = [self._most_common_label(bag_pred) for bag_pred in weak_predictions]
+        return np.array(y_pred)
+
+
+    @ staticmethod
+    def accuracy(y_true,y_pred):
+        """ check accuracy of bagging model"""
+        accuracy = np.sum(y_true == y_pred) / len(y_true)
+        return accuracy
